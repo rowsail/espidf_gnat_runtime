@@ -1,8 +1,6 @@
 
 --  This is ESP-IDF/FreeRTOS version of this package
 
-with Interfaces.C;
-
 package body System.OS_Interface is
 
    -----------------
