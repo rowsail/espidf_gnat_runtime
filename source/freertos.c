@@ -70,14 +70,14 @@ int __gnat_esp_intr_free(intr_handle_t handle)
   return esp_intr_free(handle);
 }
 
-void __gnat_gpio_clear_all_intr_status(void)
+void __gnat_gpio_clear_intr_status_for_core(int core)
 {
   gpio_dev_t *dev = GPIO_LL_GET_HW(0);
   uint32_t low = 0;
   uint32_t high = 0;
 
-  gpio_ll_get_intr_status(dev, 0, &low);
-  gpio_ll_get_intr_status_high(dev, 0, &high);
+  gpio_ll_get_intr_status(dev, core, &low);
+  gpio_ll_get_intr_status_high(dev, core, &high);
 
   if (low != 0) {
     gpio_ll_clear_intr_status(dev, low);
