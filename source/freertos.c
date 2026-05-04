@@ -4,6 +4,7 @@
 #include <esp_intr_alloc.h>
 #include <hal/gpio_ll.h>
 #include <soc/gpio_periph.h>
+#include <soc/interrupts.h>
 
 TickType_t __gnat_pdMS_TO_TICKS(unsigned ms)
 {
@@ -69,6 +70,26 @@ int __gnat_esp_intr_free(intr_handle_t handle)
 {
   return esp_intr_free(handle);
 }
+
+int __gnat_is_valid_intr_source(int source)
+{
+  return source >= 0
+         && source < ETS_MAX_INTR_SOURCE
+         && esp_isr_names[source] != NULL;
+}
+
+/* GPIO interrupt source IDs for the current target chip.
+ * Exporting these from C lets Ada avoid hardcoding values that differ
+ * across ESP32 variants.  On single-core chips there is no second GPIO
+ * source; -1 is used as a sentinel meaning "not present".
+ */
+const int __gnat_gpio_intr_source_core0 = ETS_GPIO_INTR_SOURCE;
+
+#ifdef ETS_GPIO_INTR_SOURCE2
+const int __gnat_gpio_intr_source_core1 = ETS_GPIO_INTR_SOURCE2;
+#else
+const int __gnat_gpio_intr_source_core1 = -1;
+#endif
 
 void __gnat_gpio_clear_intr_status_for_core(int core)
 {

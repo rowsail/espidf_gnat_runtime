@@ -11,8 +11,18 @@ package body System.Interrupts is
    User_Handlers : User_Handler_Array := (others => null);
    Source_Args   : Arg_Array;
 
-   GPIO_Intr_Source  : constant Interrupt_ID := 16;
-   GPIO_Intr_Source2 : constant Interrupt_ID := 18;
+   --  GPIO interrupt source IDs for the current target chip, exported from C
+   --  using the soc/interrupts.h enum values so that this file stays correct
+   --  across ESP32 variants without needing chip-specific Ada edits.
+   --  GPIO_Intr_Source2 is -1 on single-core chips that have no second GPIO
+   --  interrupt source.
+   GPIO_Intr_Source  : Interfaces.C.int
+   with Import, Convention => C,
+        External_Name => "__gnat_gpio_intr_source_core0";
+
+   GPIO_Intr_Source2 : Interfaces.C.int
+   with Import, Convention => C,
+        External_Name => "__gnat_gpio_intr_source_core1";
 
    function Gnat_Esp_Intr_Alloc
      (Source : Interfaces.C.int;
@@ -21,6 +31,13 @@ package body System.Interrupts is
       Arg    : System.Address;
       Handle : access System.Address) return Interfaces.C.int
    with Import, Convention => C, External_Name => "__gnat_esp_intr_alloc";
+
+   function Gnat_Is_Valid_Intr_Source (Source : Interfaces.C.int)
+      return Interfaces.C.int
+   with
+     Import,
+     Convention    => C,
+     External_Name => "__gnat_is_valid_intr_source";
 
    procedure Gnat_GPIO_Clear_Intr_Status_For_Core (Core : Interfaces.C.int)
    with
@@ -43,10 +60,17 @@ package body System.Interrupts is
       Handler       : constant Parameterless_Handler :=
         User_Handlers (Source_Id);
    begin
-      if Source_Id = GPIO_Intr_Source then
+      --  GPIO is the only peripheral whose interrupt-status register must be
+      --  cleared by the runtime *before* the Ada handler runs.  All other
+      --  peripherals manage their own status registers inside their handlers.
+      --  GPIO_Intr_Source2 is -1 on single-core chips, so the second branch
+      --  is never taken there.
+      if Interfaces.C.int (Source_Id) = GPIO_Intr_Source then
          Gnat_GPIO_Clear_Intr_Status_For_Core (0);
 
-      elsif Source_Id = GPIO_Intr_Source2 then
+      elsif GPIO_Intr_Source2 /= -1
+        and then Interfaces.C.int (Source_Id) = GPIO_Intr_Source2
+      then
          Gnat_GPIO_Clear_Intr_Status_For_Core (1);
       end if;
 
@@ -59,6 +83,13 @@ package body System.Interrupts is
       Result : Interfaces.C.int;
       Handle : aliased System.Address := System.Null_Address;
    begin
+      if Gnat_Is_Valid_Intr_Source (Interfaces.C.int (Interrupt)) = 0 then
+         raise Program_Error
+           with
+             "invalid or reserved interrupt source id="
+             & Interfaces.C.int'Image (Interfaces.C.int (Interrupt));
+      end if;
+
       Result :=
         Gnat_Esp_Intr_Alloc
           (Source => Interfaces.C.int (Interrupt),
