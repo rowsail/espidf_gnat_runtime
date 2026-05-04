@@ -24,6 +24,7 @@
     "files":
     {
       "a-textio.adb": { "crate": "bb_runtimes", "path": "gnat_rts_sources/include/rts-sources/system_io/a-textio.adb" },
+      "system.ads": { "crate": "espidf_gnat_runtime", "path": "source/system.ads" },
       "s-atopri.ads": { "crate": "bb_runtimes", "path": "gnat_rts_sources/include/rts-sources/atomics/32/s-atopri.ads" },
       "s-macres.adb": { "crate": "espidf_gnat_runtime", "path": "source/s-macres.adb" },
       "s-textio.adb": { "crate": "espidf_gnat_runtime", "path": "source/s-textio.adb" },
@@ -105,8 +106,12 @@
       "s-tarest.ads": { "crate": "espidf_gnat_runtime", "path": "source/gcc-15/libgnarl/s-tarest.ads" },
       "a-taside.adb": { "crate": "espidf_gnat_runtime", "path": "source/gcc-15/libgnarl/a-taside.adb" },
       "a-taside.ads": { "crate": "espidf_gnat_runtime", "path": "source/gcc-15/libgnarl/a-taside.ads" },
+      "a-interr.adb": { "crate": "espidf_gnat_runtime", "path": "source/a-interr.adb" },
+      "a-interr.ads": { "crate": "espidf_gnat_runtime", "path": "source/a-interr.ads" },
       "s-tasque.adb": { "crate": "espidf_gnat_runtime", "path": "source/gcc-15/libgnarl/s-tasque.adb" },
       "s-tasque.ads": { "crate": "espidf_gnat_runtime", "path": "source/gcc-15/libgnarl/s-tasque.ads" },
+      "s-interr.adb": { "crate": "espidf_gnat_runtime", "path": "source/s-interr.adb" },
+      "s-interr.ads": { "crate": "espidf_gnat_runtime", "path": "source/s-interr.ads" },
       "s-tasren.adb": { "crate": "espidf_gnat_runtime", "path": "source/s-tasren.adb" },
       "s-tasren.ads": { "crate": "espidf_gnat_runtime", "path": "source/s-tasren.ads" },
       "s-tasres.ads": { "crate": "espidf_gnat_runtime", "path": "source/gcc-15/libgnarl/s-tasres.ads" },

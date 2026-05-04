@@ -2,11 +2,18 @@
 --  This is ESP-IDF/FreeRTOS version of this package
 
 with Interfaces;
+with Interfaces.C;
 
 with System.FreeRTOS;
 
 package System.OS_Interface is
    pragma Preelaborate;
+
+   ----------------
+   -- Interrupts --
+   ----------------
+
+   subtype Interrupt_Range is Interfaces.C.int range 0 .. 255;
 
    -------------
    -- Threads --
