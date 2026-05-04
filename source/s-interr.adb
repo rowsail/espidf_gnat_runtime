@@ -17,23 +17,30 @@ package body System.Interrupts is
    --  GPIO_Intr_Source2 is -1 on single-core chips that have no second GPIO
    --  interrupt source.
    GPIO_Intr_Source  : Interfaces.C.int
-   with Import, Convention => C,
-        External_Name => "__gnat_gpio_intr_source_core0";
+   with
+     Import,
+     Convention    => C,
+     External_Name => "__gnat_gpio_intr_source_core0";
 
    GPIO_Intr_Source2 : Interfaces.C.int
-   with Import, Convention => C,
-        External_Name => "__gnat_gpio_intr_source_core1";
+   with
+     Import,
+     Convention    => C,
+     External_Name => "__gnat_gpio_intr_source_core1";
 
-   function Gnat_Esp_Intr_Alloc
-     (Source : Interfaces.C.int;
-      Flags  : Interfaces.C.int;
-      Hnd    : System.Address;
-      Arg    : System.Address;
-      Handle : access System.Address) return Interfaces.C.int
-   with Import, Convention => C, External_Name => "__gnat_esp_intr_alloc";
+   function Gnat_Esp_Intr_Alloc_C_Handler
+     (Source   : Interfaces.C.int;
+      Priority : Interfaces.C.int;
+      Hnd      : System.Address;
+      Arg      : System.Address;
+      Handle   : access System.Address) return Interfaces.C.int
+   with
+     Import,
+     Convention    => C,
+     External_Name => "__gnat_esp_intr_alloc_c_handler";
 
-   function Gnat_Is_Valid_Intr_Source (Source : Interfaces.C.int)
-      return Interfaces.C.int
+   function Gnat_Is_Valid_Intr_Source
+     (Source : Interfaces.C.int) return Interfaces.C.int
    with
      Import,
      Convention    => C,
@@ -48,7 +55,9 @@ package body System.Interrupts is
    procedure Interrupt_Trampoline (Arg : System.Address)
    with Convention => C;
 
-   procedure Install_Handler (Interrupt : Interrupt_ID);
+   procedure Install_Handler
+     (Interrupt : Interrupt_ID;
+      Prio      : Interrupt_Priority);
 
    procedure Interrupt_Trampoline (Arg : System.Address) is
       package Conv is new
@@ -79,10 +88,15 @@ package body System.Interrupts is
       end if;
    end Interrupt_Trampoline;
 
-   procedure Install_Handler (Interrupt : Interrupt_ID) is
+   procedure Install_Handler
+     (Interrupt : Interrupt_ID;
+      Prio      : Interrupt_Priority)
+   is
       Result : Interfaces.C.int;
       Handle : aliased System.Address := System.Null_Address;
    begin
+      --  Reject reserved or out-of-range sources early with a clear message
+      --  instead of relying on esp_intr_alloc diagnostics.
       if Gnat_Is_Valid_Intr_Source (Interfaces.C.int (Interrupt)) = 0 then
          raise Program_Error
            with
@@ -90,13 +104,16 @@ package body System.Interrupts is
              & Interfaces.C.int'Image (Interfaces.C.int (Interrupt));
       end if;
 
+      --  Priority is an Ada interrupt ceiling (241 .. 255).  The C helper
+      --  maps this band onto ESP-IDF C-callable interrupt levels 1 .. 3.
+      --  High-level assembly-entry levels (4/5/NMI) are never selected.
       Result :=
-        Gnat_Esp_Intr_Alloc
-          (Source => Interfaces.C.int (Interrupt),
-           Flags  => 0,
-           Hnd    => Interrupt_Trampoline'Address,
-           Arg    => Source_Args (Interrupt)'Address,
-           Handle => Handle'Access);
+        Gnat_Esp_Intr_Alloc_C_Handler
+          (Source   => Interfaces.C.int (Interrupt),
+           Priority => Interfaces.C.int (Prio),
+           Hnd      => Interrupt_Trampoline'Address,
+           Arg      => Source_Args (Interrupt)'Address,
+           Handle   => Handle'Access);
 
       if Result /= 0 then
          raise Program_Error
@@ -109,11 +126,12 @@ package body System.Interrupts is
    procedure Install_Restricted_Handlers
      (Prio : Interrupt_Priority; Handlers : Handler_Array)
    is
-      pragma Unreferenced (Prio);
    begin
       for J in Handlers'Range loop
          User_Handlers (Handlers (J).Interrupt) := Handlers (J).Handler;
-         Install_Handler (Handlers (J).Interrupt);
+         Install_Handler
+           (Interrupt => Handlers (J).Interrupt,
+            Prio      => Prio);
       end loop;
    end Install_Restricted_Handlers;
 

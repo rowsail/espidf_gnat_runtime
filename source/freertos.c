@@ -66,6 +66,31 @@ int __gnat_esp_intr_alloc(int source, int flags, intr_handler_t handler, void *a
   return esp_intr_alloc(source, flags, handler, arg, ret_handle);
 }
 
+int __gnat_esp_intr_alloc_c_handler(int source, int ada_interrupt_priority, intr_handler_t handler, void *arg, intr_handle_t *ret_handle)
+{
+  const int ada_first = 241;
+  const int ada_last = 255;
+  int clamped = ada_interrupt_priority;
+
+  if (clamped < ada_first) {
+    clamped = ada_first;
+  }
+
+  if (clamped > ada_last) {
+    clamped = ada_last;
+  }
+
+  /* Map Ada interrupt priorities 241..255 onto ESP-IDF C-callable interrupt
+   * levels 1..3.  High-level (4/5/NMI) paths require assembly entry points
+   * and are intentionally excluded here.  Mapping:
+   *   241..245 -> LEVEL1, 246..250 -> LEVEL2, 251..255 -> LEVEL3.
+   */
+  int flags = ESP_INTR_FLAG_LEVEL1
+              + ((clamped - ada_first) * 3) / (ada_last - ada_first + 1);
+
+  return esp_intr_alloc(source, flags, handler, arg, ret_handle);
+}
+
 int __gnat_esp_intr_free(intr_handle_t handle)
 {
   return esp_intr_free(handle);
@@ -73,6 +98,9 @@ int __gnat_esp_intr_free(intr_handle_t handle)
 
 int __gnat_is_valid_intr_source(int source)
 {
+  /* Reserved interrupt source slots are represented by NULL names in
+   * esp_isr_names[] on ESP-IDF targets.
+   */
   return source >= 0
          && source < ETS_MAX_INTR_SOURCE
          && esp_isr_names[source] != NULL;
