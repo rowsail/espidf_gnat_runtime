@@ -136,3 +136,19 @@ void __gnat_gpio_clear_intr_status_for_core(int core)
     gpio_ll_clear_intr_status_high(dev, high);
   }
 }
+
+/* Pin-specific interrupt status clear helpers.  gpio_ll_clear_intr_status and
+ * gpio_ll_clear_intr_status_high are always_inline/static and cannot be
+ * linked directly from Ada, so provide thin wrappers here.
+ * mask bits correspond to GPIO pin numbers (bit N = GPIO N).
+ * _high covers pins 32 and above (bit N = GPIO N+32).
+ */
+void __gnat_gpio_clear_intr_status(uint32_t mask)
+{
+  gpio_ll_clear_intr_status(GPIO_LL_GET_HW(0), mask);
+}
+
+void __gnat_gpio_clear_intr_status_high(uint32_t mask)
+{
+  gpio_ll_clear_intr_status_high(GPIO_LL_GET_HW(0), mask);
+}
